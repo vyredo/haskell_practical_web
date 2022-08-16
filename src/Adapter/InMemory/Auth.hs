@@ -28,7 +28,7 @@ initialState = State
 type InMemory r m = (Has (TVar State) r, MonadReader r m, MonadIO m)
 
 addAuth :: InMemory r m
-        => D.Auth -> m (Either D.RegistrationError D.VerificationCode)
+        => D.Auth -> m (Either D.RegistrationError (D.UserId, D.VerificationCode))
 addAuth auth = do
   tvar <- asks getter
 
@@ -53,28 +53,35 @@ addAuth auth = do
           , stateUnverifiedEmails = newUnverifieds
           }
     lift $ writeTVar tvar newState
-    return vCode
+    return (newUserId, vCode)
+
+orThrow :: MonadError e m => Maybe a -> e -> m a
+orThrow Nothing e = throwError e
+orThrow (Just a) _ = return a
 
 setEmailAsVerified :: InMemory r m
                    => D.VerificationCode
-                   -> m (Either D.EmailVerificationError ())
+                   -> m (Either D.EmailVerificationError (D.UserId, D.Email))
 setEmailAsVerified vCode = do
   tvar <- asks getter
   atomically . runExceptT $ do
     state <- lift $ readTVar tvar
     let unverifieds = stateUnverifiedEmails state
-        verifieds = stateVerifiedEmails state
+        -- verifieds = stateVerifiedEmails state
         mayEmail = lookup vCode unverifieds
-    case mayEmail of
-      Nothing -> throwError D.EmailVerificationErrorInvalidCode
-      Just email -> do
-        let newUnverifieds = deleteMap vCode unverifieds
-            newVerifieds = insertSet email verifieds
-            newState = state 
-              { stateUnverifiedEmails = newUnverifieds
-              , stateVerifiedEmails = newVerifieds
-              }
-        lift $ writeTVar tvar newState
+    email <- mayEmail `orThrow` D.EmailVerificationErrorInvalidCode
+    let auths = stateAuths state
+        mayUserId = map fst . find ((email ==) . D.authEmail . snd) $ auths
+    uId <- mayUserId `orThrow` D.EmailVerificationErrorInvalidCode
+    let verifieds = stateVerifiedEmails state
+        newVerifieds = insertSet email verifieds
+        newUnverifieds = deleteMap vCode unverifieds
+        newState = state
+          { stateVerifiedEmails = newVerifieds
+          , stateUnverifiedEmails = newUnverifieds
+          }
+    lift $ writeTVar tvar newState
+    return (uId, email)
 
 findUserByAuth :: InMemory r m
                => D.Auth -> m (Maybe (D.UserId, Bool))

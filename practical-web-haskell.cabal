@@ -33,7 +33,8 @@ library
         QuasiQuotes,
         GeneralizedNewtypeDeriving,
         ConstraintKinds,
-        FlexibleContexts
+        FlexibleContexts,
+        TemplateHaskell
     build-depends:    
         base ^>=4.14.3.0,
         classy-prelude,
@@ -43,7 +44,8 @@ library
         aeson,
         mtl,
         string-random,
-        data-has
+        data-has,
+        katip
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -56,7 +58,8 @@ executable practical-web-haskell
         QuasiQuotes,
         GeneralizedNewtypeDeriving,
         ConstraintKinds,
-        FlexibleContexts
+        FlexibleContexts,
+        TemplateHaskell
     -- Modules included in this executable, other than Main.
 
     -- LANGUAGE extensions used by modules in this package.
@@ -71,6 +74,7 @@ executable practical-web-haskell
         mtl,
         string-random,
         data-has,
+        katip,
         practical-web-haskell
     hs-source-dirs:   app
     default-language: Haskell2010

@@ -5,15 +5,20 @@ module Lib
 import ClassyPrelude
 import qualified Adapter.InMemory.Auth as M
 import Domain.Auth
-import Control.Monad.Except
+import Katip
+import Control.Monad
 
 type State = TVar M.State
 newtype App a = App
-  { unApp :: ReaderT State IO a
-  } deriving (Applicative, Functor, Monad, MonadReader State, MonadIO)
+  { unApp :: ReaderT State (KatipContextT IO) a
+  } deriving ( Applicative, Functor, Monad, MonadReader State, MonadIO
+             , KatipContext, Katip)
 
-run :: State -> App a -> IO a
-run state = flip runReaderT state . unApp
+run :: LogEnv -> State -> App a -> IO a
+run le state 
+  = runKatipContextT le () mempty
+  . flip runReaderT state 
+  . unApp
 
 instance AuthRepo App where
   addAuth = M.addAuth
@@ -28,13 +33,23 @@ instance SessionRepo App where
   newSession = M.newSession
   findUserIdBySessionId = M.findUserIdBySessionId
 
+
 instance MonadFail App where
   fail = undefined
 
+withKatip :: (LogEnv -> IO a) -> IO a
+withKatip app =
+  bracket createLogEnv closeScribes app
+  where
+    createLogEnv = do
+      logEnv <- initLogEnv "HAuth" "prod"
+      stdoutScribe <- mkHandleScribe ColorIfTerminal stdout (permitItem InfoS) V2
+      registerScribe "stdout" stdoutScribe defaultScribeSettings logEnv
+
 someFunc :: IO ()
-someFunc = do
+someFunc = withKatip $ \le -> do
   state <- newTVarIO M.initialState
-  run state action
+  run le state action
 
 action :: App ()
 action = do
