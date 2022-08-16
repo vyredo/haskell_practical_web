@@ -23,13 +23,17 @@ extra-source-files: CHANGELOG.md
 
 library
     exposed-modules:  
+        Adapter.InMemory.Auth,
         Domain.Auth,
-        Domain.Validation
+        Domain.Validation,
+        Lib
     default-extensions:
         OverloadedStrings,
         NoImplicitPrelude,
         QuasiQuotes,
-        TemplateHaskell
+        GeneralizedNewtypeDeriving,
+        ConstraintKinds,
+        FlexibleContexts
     build-depends:    
         base ^>=4.14.3.0,
         classy-prelude,
@@ -37,8 +41,9 @@ library
         time-lens,
         pcre-heavy,
         aeson,
-        template-haskell,
-        mtl
+        mtl,
+        string-random,
+        data-has
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -49,7 +54,9 @@ executable practical-web-haskell
         OverloadedStrings,
         NoImplicitPrelude,
         QuasiQuotes,
-        TemplateHaskell
+        GeneralizedNewtypeDeriving,
+        ConstraintKinds,
+        FlexibleContexts
     -- Modules included in this executable, other than Main.
 
     -- LANGUAGE extensions used by modules in this package.
@@ -61,8 +68,9 @@ executable practical-web-haskell
         time-lens,
         pcre-heavy,
         aeson,
-        template-haskell,
+        mtl,
+        string-random,
+        data-has,
         practical-web-haskell
-
     hs-source-dirs:   app
     default-language: Haskell2010

@@ -1,11 +1,12 @@
 module Main where
 
-import qualified Domain.Auth 
+import Lib (someFunc)
 import ClassyPrelude
 
 main :: IO ()
 main = do
   let a = mapFromList [('a','b')] :: Map Char Char
   print a
+  someFunc
   putStrLn "Hello, Haskell!"
   
