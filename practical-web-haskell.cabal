@@ -33,8 +33,8 @@ library
         QuasiQuotes,
         GeneralizedNewtypeDeriving,
         ConstraintKinds,
-        FlexibleContexts,
-        TemplateHaskell
+        TemplateHaskell,
+        FlexibleContexts
     build-depends:    
         base ^>=4.14.3.0,
         classy-prelude,
@@ -45,7 +45,9 @@ library
         mtl,
         string-random,
         data-has,
-        katip
+        katip,
+        resource-pool,
+        postgresql-simple
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -75,6 +77,8 @@ executable practical-web-haskell
         string-random,
         data-has,
         katip,
-        practical-web-haskell
+        resource-pool,
+        postgresql-simple,
+        practical-web-haskell,
     hs-source-dirs:   app
     default-language: Haskell2010

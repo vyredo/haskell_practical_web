@@ -1,6 +1,7 @@
 module Adapter.InMemory.Auth where
   
 import ClassyPrelude
+import Data.Has
 import qualified Domain.Auth as D
 import Control.Monad.Except
 import Text.StringRandom
