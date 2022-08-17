@@ -4,11 +4,15 @@ module Lib
 
 import ClassyPrelude
 import qualified Adapter.InMemory.Auth as M
+import qualified Adapter.PostgreSQL.Auth as PG
+import qualified Adapter.Redis.Auth as Redis
+import ClassyPrelude
 import Domain.Auth
 import Katip
 import Control.Monad
 
-type State = TVar M.State
+type State = (PG.State, Redis.State, TVar M.State)
+
 newtype App a = App
   { unApp :: ReaderT State (KatipContextT IO) a
   } deriving ( Applicative, Functor, Monad, MonadReader State, MonadIO
@@ -30,16 +34,15 @@ instance EmailVerificationNotif App where
   notifyEmailVerification = M.notifyEmailVerification
 
 instance SessionRepo App where
-  newSession = M.newSession
-  findUserIdBySessionId = M.findUserIdBySessionId
+  newSession = Redis.newSession
+  findUserIdBySessionId = Redis.findUserIdBySessionId
 
 
 instance MonadFail App where
   fail = undefined
 
 withKatip :: (LogEnv -> IO a) -> IO a
-withKatip app =
-  bracket createLogEnv closeScribes app
+withKatip = bracket createLogEnv closeScribes
   where
     createLogEnv = do
       logEnv <- initLogEnv "HAuth" "prod"
@@ -63,3 +66,19 @@ action = do
   Just uId <- resolveSessionId session
   Just registeredEmail <- getUser uId
   print (session, uId, registeredEmail)
+
+someFunc :: IO ()
+someFunc = withKatip $ \le -> do
+  mState <- newTVarIO M.initialState
+  PG.withState pgCfg $ \pgState ->
+    Redis.withState redisCfg $ \redisState -> do
+      run le (pgState, redisState, mState) action
+  where
+    redisCfg = "redis://localhost:6379/0"
+    pgCfg =
+      PG.Config
+        { PG.configUrl = "postgresql://localhost/hauth",
+          PG.configStripreCount = 2,
+          PG.configMaxOpenConnPerStripe = 5,
+          PG.configIdleConnTimeout = 10
+        }
