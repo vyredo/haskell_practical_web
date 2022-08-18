@@ -1,12 +1,11 @@
 module Main where
 
-import Lib (someFunc)
 import ClassyPrelude
+import qualified Lib as L
 
 main :: IO ()
 main = do
-  let a = mapFromList [('a','b')] :: Map Char Char
+  let a = mapFromList [('a', 'b')] :: Map Char Char
   print a
-  someFunc
+  L.main
   putStrLn "Hello, Haskell!"
-  
