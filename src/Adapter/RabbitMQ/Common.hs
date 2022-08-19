@@ -1,8 +1,12 @@
+module Adapter.RabbitMQ.Common where
+
 import ClassyPrelude
 import Data.Aeson
 import Data.Has
 import Katip
 import Network.AMQP
+import Control.Monad
+import Control.Monad.Catch hiding (bracket)
 
 data State = State
   { statePublisherChan :: Channel,
@@ -45,7 +49,7 @@ initConsumer :: State -> Text -> (Message -> IO Bool) -> IO ()
 initConsumer (State _ conChan) queueName handler = do
   void
     . consumeMsgs conChan queueName Ack
-    $ \(msg, env) -> void . fork $ do
+    $ \(msg, env) -> void  $ do
       result <- handler msg
       if result
         then ackEnv env
@@ -53,14 +57,14 @@ initConsumer (State _ conChan) queueName handler = do
 
 type Rabbit r m = (Has State r, MonadReader r m, MonadIO m)
 
-publish :: (ToJson a, Rabbit r m) => Text -> Text -> a -> m ()
+publish :: (ToJSON a, Rabbit r m) => Text -> Text -> a -> m ()
 publish exchange routingKey payload = do
   (State chan _) <- asks getter
   let msg = newMsg {msgBody = encode payload}
   liftIO . void $ publishMsg chan exchange routingKey msg
 
 consumeAndProcess ::
-  (KatipContext m, FromJSON a, MonadCatch m) =>
+  (KatipContext m, FromJSON a, MonadCatch m, MonadUnliftIO m) =>
   Message ->
   (a -> m Bool) ->
   m Bool

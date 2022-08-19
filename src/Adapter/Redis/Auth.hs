@@ -1,25 +1,27 @@
 module Adapter.Redis.Auth where
-
+  
 import ClassyPrelude
-import Data.Has
-import qualified Database.Redis as R
 import qualified Domain.Auth as D
 import Text.StringRandom
+import Data.Has
+import qualified Database.Redis as R
+import Control.Monad.Catch hiding (bracket)
 
 type State = R.Connection
 
--- | create state from redis url string.
+type Redis r m = (Has State r, MonadReader r m, MonadIO m, MonadThrow m)
+
+-- | Create state from redis url string.
 -- format: redis://user:pass@host:port/db
 -- sample: redis://abc:def@localhost:6379/0
 withState :: String -> (State -> IO a) -> IO a
-withState connUrl action = do
+withState connUrl action =
   case R.parseConnectInfo connUrl of
-    Left err -> throwString "Invalid Redis Conn URL" <> show err
-    Right connectInfo -> do
-      conn <- R.connect connectInfo
+    Left _ ->
+      throwString $ "Invalid Redis conn URL: " <> connUrl
+    Right connInfo -> do
+      conn <- R.checkedConnect connInfo
       action conn
-
-type Redis r m = (Has State r, MonadReader r m, MonadIO m, MonadThrow m)
 
 withConn :: Redis r m => R.Redis a -> m a
 withConn action = do
@@ -28,8 +30,15 @@ withConn action = do
 
 newSession :: Redis r m => D.UserId -> m D.SessionId
 newSession userId = do
-  sessionId <- liftIO $ stringRandomIO "[a-zA-Z0-9]{32}"
-  result <- withConn $ R.set (emcodeUtf8 sessionId) (fromString . show $ userId)
+  sId <- liftIO $ stringRandomIO "[a-zA-Z0-9]{32}"
+  result <- withConn $ R.set (encodeUtf8 sId) (fromString . show $ userId) 
   case result of
-    Right R.Ok -> return sessionId
+    Right R.Ok -> return sId
     err -> throwString $ "Unexpected redis error: " <> show err
+
+findUserIdBySessionId :: Redis r m => D.SessionId -> m (Maybe D.UserId)
+findUserIdBySessionId sId = do
+  result <- withConn $ R.get (encodeUtf8 sId)
+  case result of
+    Right (Just uIdStr) -> return $ readMay . unpack . decodeUtf8 $ uIdStr
+    err                 -> throwString $ "Unexpected redis error: " <> show err

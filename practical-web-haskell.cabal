@@ -48,7 +48,10 @@ library
         katip,
         resource-pool,
         postgresql-simple,
-        hedis
+        postgresql-simple-migration,
+        amqp,
+        hedis,
+        exceptions
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -80,7 +83,10 @@ executable practical-web-haskell
         katip,
         resource-pool,
         postgresql-simple,
+        postgresql-simple-migration,
         hedis,
+        amqp,
+        exceptions,
         practical-web-haskell
     hs-source-dirs:   app
     default-language: Haskell2010

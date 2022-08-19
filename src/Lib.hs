@@ -10,8 +10,12 @@ import qualified Adapter.RabbitMQ.Common as MQ
 import qualified Adapter.Redis.Auth as Redis
 import ClassyPrelude
 import Control.Monad
+import Control.Monad.Catch hiding (bracket)
+import Text.StringRandom
 import Domain.Auth
 import Katip
+
+
 
 type State = (PG.State, Redis.State, MQ.State, TVar M.State)
 
@@ -90,15 +94,18 @@ withState action =
           let state = (pgState, redisState, mqState, mState)
           action le state
   where
-    mqCfg = "amqp://guest:guest@localhost:5672/%2F"
+    mqCfg = "amqp://localhost:5672"
     redisCfg = "redis://localhost:6379/0"
     pgCfg =
       PG.Config
         { PG.configUrl = "postgresql://localhost/hauth",
-          PG.configStripreCount = 2,
+          PG.configStripeCount = 2,
           PG.configMaxOpenConnPerStripe = 5,
           PG.configIdleConnTimeout = 10
         }
+
+instance MonadUnliftIO App where
+  withRunInIO inner = App $ withRunInIO $ \run -> inner (run . unApp)
 
 main :: IO ()
 main =
